@@ -1,0 +1,15 @@
+version: '3.4'
+
+services:
+  lms.api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=80
+      # SỬA TẠI ĐÂY: Dùng host.docker.internal để kết nối ngược ra SQL Server trên máy thật của bạn
+      # Điền đúng Database, User Id (sa) và Password (12345) trên máy thật của bạn vào đây
+      - ConnectionStrings__DefaultConnection=Server=host.docker.internal;Database=PRN232_LMS_LAB01;User Id=sa;Password=12345;TrustServerCertificate=True;MultipleActiveResultSets=true;
