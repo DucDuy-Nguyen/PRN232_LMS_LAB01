@@ -1,4 +1,4 @@
-namespace PRN232.LMS.API.Models;
+namespace PRN232.LMS.API.Models.Common;
 
 public class ApiResponse<T>
 {

@@ -2,6 +2,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using PRN232.LMS.API.Helpers;
 using PRN232.LMS.API.Models;
+using PRN232.LMS.API.Models.Common;
 using PRN232.LMS.API.Models.Requests;
 using PRN232.LMS.API.Models.Responses;
 using PRN232.LMS.Services;
