@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PRN232.LMS.Repositories.Entities;
 using PRN232.LMS.Repositories;
 using PRN232.LMS.Services;
+using PRN232.LMS.API.Mappings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,7 +31,10 @@ builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<ISemesterService, SemesterService>();
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
-builder.Services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
+builder.Services.AddAutoMapper(cfg => {
+    cfg.AddProfile<MappingProfile>();
+    cfg.AddProfile<ApiMappingProfile>();
+});
 
 var app = builder.Build();
 
@@ -51,7 +55,8 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<Prn232LmsLab01Context>();
-    context.Database.EnsureCreated(); // Dòng này sẽ tự động tạo Database tên LmsDb và các bảng bên trong Docker cho bạn nếu nó chưa có
+    context.Database.EnsureCreated(); // Creates DB in Docker if missing
+    PRN232.LMS.API.Helpers.DataSeeder.Initialize(context); // Seeds dummy data
 }
 
 app.Run();

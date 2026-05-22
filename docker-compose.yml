@@ -1,15 +1,39 @@
 version: '3.4'
 
 services:
-  lms.api:
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: prn232-sqlserver
+
+    environment:
+      SA_PASSWORD: "Admin@123"
+      ACCEPT_EULA: "Y"
+
+    ports:
+      - "1433:1433"
+
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Admin@123' -Q 'SELECT 1' -No || exit 1"]
+      interval: 10s
+      retries: 10
+      start_period: 30s
+      timeout: 5s
+
+  prn232-api:
     build:
       context: .
       dockerfile: Dockerfile
+
+    container_name: prn232-api
+
     ports:
-      - "8080:80"
+      - "8080:8080"
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=80
-      # SỬA TẠI ĐÂY: Dùng host.docker.internal để kết nối ngược ra SQL Server trên máy thật của bạn
-      # Điền đúng Database, User Id (sa) và Password (12345) trên máy thật của bạn vào đây
-      - ConnectionStrings__DefaultConnection=Server=host.docker.internal;Database=PRN232_LMS_LAB01;User Id=sa;Password=12345;TrustServerCertificate=True;MultipleActiveResultSets=true;
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=PRN232_LMS_LAB01;User Id=sa;Password=Admin@123;TrustServerCertificate=True;MultipleActiveResultSets=true;"
