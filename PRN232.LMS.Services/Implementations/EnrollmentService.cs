@@ -18,26 +18,48 @@ public class EnrollmentService : IEnrollmentService
         _mapper = mapper;
     }
 
+    /// <summary>
+    /// Applies Include/ThenInclude based on the expand string.
+    /// Handles: student, course, semester, subject.
+    /// semester and subject are nested under course.
+    /// </summary>
+    private IQueryable<Enrollment> ApplyExpand(IQueryable<Enrollment> baseQuery, string? expand)
+    {
+        if (string.IsNullOrWhiteSpace(expand)) return baseQuery;
+
+        var expands = expand.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => s.Trim().ToLowerInvariant())
+                            .ToList();
+
+        var query = baseQuery;
+
+        if (expands.Contains("student"))
+            query = query.Include(e => e.Student);
+
+        bool needsCourse = expands.Contains("course") || expands.Contains("semester") || expands.Contains("subject");
+        bool needsSemester = expands.Contains("semester");
+        bool needsSubject = expands.Contains("subject");
+
+        if (needsCourse)
+        {
+            if (needsSemester)
+                query = query.Include(e => e.Course).ThenInclude(c => c.Semester);
+            if (needsSubject)
+                query = query.Include(e => e.Course).ThenInclude(c => c.Subject);
+            if (!needsSemester && !needsSubject)
+                query = query.Include(e => e.Course);
+        }
+
+        return query;
+    }
+
     public async Task<PaginatedResult<EnrollmentDto>> GetEnrollmentsAsync(string? search, string? sort, int page, int size, string? fields, string? expand)
     {
-        var query = _repository.GetAll();
-
-        // 0. Expand
-        if (!string.IsNullOrWhiteSpace(expand))
-        {
-            var expands = expand.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var inc in expands)
-            {
-                if (inc.Trim().Equals("student", StringComparison.OrdinalIgnoreCase)) query = query.Include(e => e.Student);
-                if (inc.Trim().Equals("course", StringComparison.OrdinalIgnoreCase)) query = query.Include(e => e.Course);
-            }
-        }
+        var query = ApplyExpand(_repository.GetAll(), expand);
 
         // 1. Search
         if (!string.IsNullOrWhiteSpace(search))
-        {
             query = query.Where(e => e.Status.Contains(search));
-        }
 
         // 2. Sort
         if (!string.IsNullOrWhiteSpace(sort))
@@ -75,35 +97,14 @@ public class EnrollmentService : IEnrollmentService
 
     public async Task<IEnumerable<EnrollmentDto>> GetEnrollmentsByCourseIdAsync(int courseId, string? expand)
     {
-        var query = _repository.GetAll().Where(e => e.CourseId == courseId);
-
-        // 0. Expand
-        if (!string.IsNullOrWhiteSpace(expand))
-        {
-            var expands = expand.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var inc in expands)
-            {
-                if (inc.Trim().Equals("student", StringComparison.OrdinalIgnoreCase)) query = query.Include(e => e.Student);
-                if (inc.Trim().Equals("course", StringComparison.OrdinalIgnoreCase)) query = query.Include(e => e.Course);
-            }
-        }
-
+        var query = ApplyExpand(_repository.GetAll().Where(e => e.CourseId == courseId), expand);
         var entities = await query.ToListAsync();
         return _mapper.Map<List<EnrollmentDto>>(entities);
     }
 
     public async Task<EnrollmentDto?> GetEnrollmentByIdAsync(int id, string? fields, string? expand)
     {
-        var query = _repository.GetAll();
-        if (!string.IsNullOrWhiteSpace(expand))
-        {
-            var expands = expand.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var inc in expands)
-            {
-                if (inc.Trim().Equals("student", StringComparison.OrdinalIgnoreCase)) query = query.Include(e => e.Student);
-                if (inc.Trim().Equals("course", StringComparison.OrdinalIgnoreCase)) query = query.Include(e => e.Course);
-            }
-        }
+        var query = ApplyExpand(_repository.GetAll(), expand);
         var entity = await query.FirstOrDefaultAsync(e => e.EnrollmentId == id);
         if (entity == null) return null;
         return _mapper.Map<EnrollmentDto>(entity);
