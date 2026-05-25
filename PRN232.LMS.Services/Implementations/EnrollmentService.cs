@@ -73,6 +73,25 @@ public class EnrollmentService : IEnrollmentService
         };
     }
 
+    public async Task<IEnumerable<EnrollmentDto>> GetEnrollmentsByCourseIdAsync(int courseId, string? expand)
+    {
+        var query = _repository.GetAll().Where(e => e.CourseId == courseId);
+
+        // 0. Expand
+        if (!string.IsNullOrWhiteSpace(expand))
+        {
+            var expands = expand.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var inc in expands)
+            {
+                if (inc.Trim().Equals("student", StringComparison.OrdinalIgnoreCase)) query = query.Include(e => e.Student);
+                if (inc.Trim().Equals("course", StringComparison.OrdinalIgnoreCase)) query = query.Include(e => e.Course);
+            }
+        }
+
+        var entities = await query.ToListAsync();
+        return _mapper.Map<List<EnrollmentDto>>(entities);
+    }
+
     public async Task<EnrollmentDto?> GetEnrollmentByIdAsync(int id, string? fields, string? expand)
     {
         var query = _repository.GetAll();

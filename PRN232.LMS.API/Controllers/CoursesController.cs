@@ -16,11 +16,13 @@ namespace PRN232.LMS.API.Controllers;
 public class CoursesController : ControllerBase
 {
     private readonly ICourseService _courseService;
+    private readonly IEnrollmentService _enrollmentService;
     private readonly IMapper _mapper;
 
-    public CoursesController(ICourseService courseService, IMapper mapper)
+    public CoursesController(ICourseService courseService, IEnrollmentService enrollmentService, IMapper mapper)
     {
         _courseService = courseService;
+        _enrollmentService = enrollmentService;
         _mapper = mapper;
     }
 
@@ -80,6 +82,27 @@ public class CoursesController : ControllerBase
         var shapedData = responseModel.ShapeData(fields);
 
         return Ok(ApiResponse<ExpandoObject>.Ok(shapedData));
+    }
+
+    /// <summary>
+    /// Gets a list of enrollments for a specific course with optional expansion.
+    /// </summary>
+    /// <param name="id">The course ID.</param>
+    /// <param name="expand">Related entities to include (e.g., student, course).</param>
+    /// <returns>A list of enrollment data for the course.</returns>
+    [HttpGet("{id}/enrollments")]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<EnrollmentResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetEnrollmentsForCourse(int id, [FromQuery] string? expand = null)
+    {
+        var course = await _courseService.GetCourseByIdAsync(id, null, null);
+        if (course == null)
+            return NotFound(ApiResponse<object>.Error("Course not found"));
+
+        var result = await _enrollmentService.GetEnrollmentsByCourseIdAsync(id, expand);
+        var responseModels = _mapper.Map<IEnumerable<EnrollmentResponse>>(result);
+
+        return Ok(ApiResponse<IEnumerable<EnrollmentResponse>>.Ok(responseModels, "Enrollments retrieved successfully."));
     }
 
     /// <summary>
